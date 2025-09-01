@@ -1,251 +1,586 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Advanced SeatMap Editor</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
-<style>
-  body { margin:0; overflow:hidden; }
-  #canvas-container { border:1px solid #ccc; width:100%; height:100%; }
-  #sidebar { height:100vh; overflow-y:auto; }
-  .toolbar button { margin-right:5px; margin-bottom:5px; }
-</style>
-</head>
-<body>
-<!-- Modal for new layout -->
-<div class="modal fade" id="planModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header"><h5 class="modal-title">Create New Seat Plan</h5></div>
-      <div class="modal-body">
-        <div class="mb-2"><label>Plan Name</label><input type="text" id="modalPlanName" class="form-control" value="My Plan"></div>
-        <div class="mb-2"><label>Section Name</label><input type="text" id="modalSection" class="form-control" value="Main"></div>
-        <div class="mb-2"><label>Shape</label>
-          <select id="modalShape" class="form-select">
-            <option value="circle">Circle</option>
-            <option value="rect">Rectangle</option>
-            <option value="ellipse">Ellipse</option>
-            <option value="polygon">Polygon</option>
-          </select>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Advanced SeatMap Editor</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+      #canvas-container {
+        border: 1px solid #ccc;
+        width: 100%;
+        height: 100%;
+      }
+      #sidebar {
+        height: 100vh;
+        overflow-y: auto;
+      }
+      .toolbar button {
+        margin-right: 5px;
+        margin-bottom: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Modal for new layout -->
+    <div class="modal fade" id="planModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Create Seat Plan</h5>
+          </div>
+          <div class="modal-body">
+            <p>Enter section details:</p>
+            <div class="mb-2">
+              <label>Number of Sections</label>
+              <input
+                type="number"
+                id="numSections"
+                class="form-control"
+                value="1"
+                min="1"
+              />
+            </div>
+            <div id="sectionsContainer"></div>
+            <button id="addSectionBtn" class="btn btn-sm btn-secondary mb-2">
+              ➕ Add Section
+            </button>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              id="modalDrawBtn"
+              class="btn btn-primary w-100"
+            >
+              Draw Seats
+            </button>
+          </div>
         </div>
-        <div class="mb-2"><label>Rows</label><input type="number" id="modalRows" class="form-control" value="5"></div>
-        <div class="mb-2"><label>Columns</label><input type="number" id="modalColumns" class="form-control" value="10"></div>
-        <div class="mb-2"><label>Column Start</label><input type="number" id="modalColStart" class="form-control" value="1"></div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" id="modalDrawBtn" class="btn btn-primary w-100">Draw Seats</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="container-fluid">
-  <div class="row">
-    <!-- Toolbar -->
-    <div class="col-12 bg-light p-2 toolbar">
-      <button id="dragGridBtn" class="btn btn-sm btn-info">📦 Drag Grid</button>
-      <button id="singleRowBtn" class="btn btn-sm btn-secondary">➖ Single Row</button>
-      <button id="rectTool" class="btn btn-sm btn-outline-primary">⬛ Rectangle</button>
-      <button id="circleTool" class="btn btn-sm btn-outline-primary">⚪ Circle</button>
-      <button id="ellipseTool" class="btn btn-sm btn-outline-primary">⭕ Ellipse</button>
-      <button id="polygonTool" class="btn btn-sm btn-outline-primary">🔺 Polygon</button>
-      <button id="exportBtn" class="btn btn-sm btn-warning">📤 Export JSON</button>
-    </div>
-
-    <!-- Canvas -->
-    <div class="col-9 p-0" style="height:100vh;">
-      <div id="canvas-container">
-        <canvas id="seatCanvas"></canvas>
       </div>
     </div>
 
-    <!-- Sidebar -->
-    <div id="sidebar" class="col-3 bg-white p-3 border-start">
-      <ul class="nav nav-tabs" id="sidebarTab" role="tablist">
-        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#seat-edit">Seat Edit</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#price-type">Price & Type</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#custom-settings">Custom</button></li>
-      </ul>
+    <div class="container-fluid">
+      <div class="row">
+        <!-- Toolbar -->
+        <div class="col-12 bg-light p-2 toolbar">
+          <button id="dragGridBtn" class="btn btn-sm btn-info">
+            📦 Drag Grid
+          </button>
+          <button id="singleRowBtn" class="btn btn-sm btn-secondary">
+            ➖ Single Row
+          </button>
+          <button id="rectTool" class="btn btn-sm btn-outline-primary">
+            ⬛ Rectangle
+          </button>
+          <button id="circleTool" class="btn btn-sm btn-outline-primary">
+            ⚪ Circle
+          </button>
+          <button id="ellipseTool" class="btn btn-sm btn-outline-primary">
+            ⭕ Ellipse
+          </button>
+          <button id="polygonTool" class="btn btn-sm btn-outline-primary">
+            🔺 Polygon
+          </button>
+          <button id="exportBtn" class="btn btn-sm btn-warning">
+            📤 Export JSON
+          </button>
+        </div>
 
-      <div class="tab-content mt-2">
-        <!-- Seat Edit -->
-        <div class="tab-pane fade show active" id="seat-edit">
-          <div class="mb-2"><label>Row Prefix</label><input type="text" id="rowInput" class="form-control" value="A"></div>
-          <div class="mb-2"><label>Column Number</label><input type="number" id="numInput" class="form-control" value="1"></div>
-          <div class="mb-2"><label>Seat Name</label><input type="text" id="seatNameInput" class="form-control" value=""></div>
-          <div class="mb-2"><label>Rows</label><input type="number" id="gridRows" class="form-control" value="5"></div>
-          <div class="mb-2"><label>Columns</label><input type="number" id="gridCols" class="form-control" value="10"></div>
-          <div class="mb-2"><label>Column Start</label><input type="number" id="gridColStart" class="form-control" value="1"></div>
-          <button id="drawSeatBtn" class="btn btn-success w-100 mb-2">➕ Draw Single Seat</button>
-          <button id="drawGridBtn" class="btn btn-primary w-100 mb-2">📦 Draw Grid</button>
-          <button id="deleteBtn" class="btn btn-danger w-100 mb-2">🗑 Delete Selected</button>
-          <div class="mb-2"><label>Alignment</label></div>
-          <div class="d-flex flex-wrap gap-1 mb-2">
-            <button class="btn btn-sm btn-outline-primary" onclick="alignSeats('left')">Left</button>
-            <button class="btn btn-sm btn-outline-primary" onclick="alignSeats('right')">Right</button>
-            <button class="btn btn-sm btn-outline-primary" onclick="alignSeats('top')">Top</button>
-            <button class="btn btn-sm btn-outline-primary" onclick="alignSeats('bottom')">Bottom</button>
-            <button class="btn btn-sm btn-outline-primary" onclick="alignSeats('hcenter')">H-Center</button>
-            <button class="btn btn-sm btn-outline-primary" onclick="alignSeats('vcenter')">V-Center</button>
+        <!-- Canvas -->
+        <div class="col-9 p-0" style="height: 100vh">
+          <div id="canvas-container">
+            <canvas id="seatCanvas"></canvas>
           </div>
         </div>
 
-        <!-- Price & Type -->
-        <div class="tab-pane fade" id="price-type">
-          <div class="mb-2"><label>Seat Type</label><select id="typeInput" class="form-select"></select></div>
-          <div class="mb-2"><label>Price</label><input type="number" id="priceInput" class="form-control" value="0"></div>
-          <div class="mb-2"><label>Add New Type</label>
-            <input type="text" id="newTypeName" class="form-control" placeholder="Type Name">
-            <input type="color" id="newTypeColor" class="form-control mt-1" value="#4caf50">
-            <button id="addTypeBtn" class="btn btn-sm btn-success mt-1 w-100">Add Type</button>
-          </div>
-        </div>
+        <!-- Sidebar -->
+        <div id="sidebar" class="col-3 bg-white p-3 border-start">
+          <ul class="nav nav-tabs" id="sidebarTab" role="tablist">
+            <li class="nav-item">
+              <button
+                class="nav-link active"
+                data-bs-toggle="tab"
+                data-bs-target="#seat-edit"
+              >
+                Seat Edit
+              </button>
+            </li>
+            <li class="nav-item">
+              <button
+                class="nav-link"
+                data-bs-toggle="tab"
+                data-bs-target="#price-type"
+              >
+                Price & Type
+              </button>
+            </li>
+            <li class="nav-item">
+              <button
+                class="nav-link"
+                data-bs-toggle="tab"
+                data-bs-target="#custom-settings"
+              >
+                Custom
+              </button>
+            </li>
+          </ul>
 
-        <!-- Custom -->
-        <div class="tab-pane fade" id="custom-settings">
-          <div class="mb-2"><label>Floor</label><input type="text" id="floorInput" class="form-control"></div>
-          <div class="mb-2"><label>Section</label><input type="text" id="sectionInput" class="form-control"></div>
+          <div class="tab-content mt-2">
+            <!-- Seat Edit -->
+            <div class="tab-pane fade show active" id="seat-edit">
+              <div class="mb-2">
+                <label>Row Prefix</label
+                ><input
+                  type="text"
+                  id="rowInput"
+                  class="form-control"
+                  value="A"
+                />
+              </div>
+              <div class="mb-2">
+                <label>Column Number</label
+                ><input
+                  type="number"
+                  id="numInput"
+                  class="form-control"
+                  value="1"
+                />
+              </div>
+              <div class="mb-2">
+                <label>Seat Name</label
+                ><input type="text" id="seatNameInput" class="form-control" />
+              </div>
+              <div class="mb-2">
+                <label>Rows</label
+                ><input
+                  type="number"
+                  id="gridRows"
+                  class="form-control"
+                  value="5"
+                />
+              </div>
+              <div class="mb-2">
+                <label>Columns</label
+                ><input
+                  type="number"
+                  id="gridCols"
+                  class="form-control"
+                  value="10"
+                />
+              </div>
+              <div class="mb-2">
+                <label>Column Start</label
+                ><input
+                  type="number"
+                  id="gridColStart"
+                  class="form-control"
+                  value="1"
+                />
+              </div>
+              <button id="drawSeatBtn" class="btn btn-success w-100 mb-2">
+                ➕ Draw Single Seat
+              </button>
+              <button id="drawGridBtn" class="btn btn-primary w-100 mb-2">
+                📦 Draw Grid
+              </button>
+              <button id="deleteBtn" class="btn btn-danger w-100 mb-2">
+                🗑 Delete Selected
+              </button>
+            </div>
+
+            <!-- Price & Type -->
+            <div class="tab-pane fade" id="price-type">
+              <div class="mb-2">
+                <label>Seat Type</label
+                ><select id="typeInput" class="form-select"></select>
+              </div>
+              <div class="mb-2">
+                <label>Price</label
+                ><input
+                  type="number"
+                  id="priceInput"
+                  class="form-control"
+                  value="0"
+                />
+              </div>
+              <div class="mb-2">
+                <label>Add New Type</label>
+                <input
+                  type="text"
+                  id="newTypeName"
+                  class="form-control"
+                  placeholder="Type Name"
+                />
+                <input
+                  type="color"
+                  id="newTypeColor"
+                  class="form-control mt-1"
+                  value="#4caf50"
+                />
+                <button
+                  id="addTypeBtn"
+                  class="btn btn-sm btn-success mt-1 w-100"
+                >
+                  Add Type
+                </button>
+              </div>
+            </div>
+
+            <!-- Custom -->
+            <div class="tab-pane fade" id="custom-settings">
+              <div class="mb-2">
+                <label>Floor</label
+                ><input type="text" id="floorInput" class="form-control" />
+              </div>
+              <div class="mb-2">
+                <label>Section</label
+                ><input type="text" id="sectionInput" class="form-control" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-</div>
 
-<script>
-const container=document.getElementById('canvas-container');
-const canvas=new fabric.Canvas('seatCanvas',{selection:true,preserveObjectStacking:true});
-function resizeCanvas(){canvas.setWidth(container.clientWidth);canvas.setHeight(container.clientHeight);canvas.renderAll();}
-resizeCanvas();window.addEventListener('resize',resizeCanvas);
+    <!-- ...keep the head and body layout as before... -->
 
-// Seat types
-let seatTypes={Standard:"#4caf50",VIP:"#FFD700",Hold:"#00BFFF"};
-function refreshTypeSelect(){const sel=document.getElementById('typeInput');sel.innerHTML="";Object.keys(seatTypes).forEach(t=>{const opt=document.createElement('option');opt.value=t;opt.textContent=t;sel.appendChild(opt);});}
-refreshTypeSelect();
-document.getElementById('addTypeBtn').onclick=()=>{
-  const name=document.getElementById('newTypeName').value.trim();const color=document.getElementById('newTypeColor').value;
-  if(name){seatTypes[name]=color;refreshTypeSelect();document.getElementById('newTypeName').value="";}
-};
+    <script>
+      const container = document.getElementById("canvas-container");
+      const canvas = new fabric.Canvas("seatCanvas", {
+        selection: true,
+        preserveObjectStacking: true,
+      });
+      function resizeCanvas() {
+        canvas.setWidth(container.clientWidth);
+        canvas.setHeight(container.clientHeight);
+        canvas.renderAll();
+      }
+      resizeCanvas();
+      window.addEventListener("resize", resizeCanvas);
 
-// create seat
-function createSeat(x,y,row,col,type="Standard",price=0,floor="",section="",seatName=""){
-  const circle=new fabric.Circle({left:x,top:y,radius:15,fill:seatTypes[type],stroke:'#333',strokeWidth:1,originX:'center',originY:'center'});
-  const labelText=seatName||row+col;
-  const label=new fabric.Text(labelText,{fontSize:12,originX:'center',originY:'center',top:y,left:x,selectable:false});
-  const group=new fabric.Group([circle,label],{left:x,top:y,hasControls:false,lockScalingFlip:true});
-  group.customProps={row,col,type,price,floor,section,seatName:labelText};
-  canvas.add(group);canvas.renderAll();
-}
+      // Seat types
+      let seatTypes = { Standard: "#4caf50", VIP: "#FFD700", Hold: "#00BFFF" };
+      function refreshTypeSelect() {
+        const sel = document.getElementById("typeInput");
+        sel.innerHTML = "";
+        Object.keys(seatTypes).forEach((t) => {
+          const opt = document.createElement("option");
+          opt.value = t;
+          opt.textContent = t;
+          sel.appendChild(opt);
+        });
+      }
+      refreshTypeSelect();
+      document.getElementById("addTypeBtn").onclick = () => {
+        const name = document.getElementById("newTypeName").value.trim();
+        const color = document.getElementById("newTypeColor").value;
+        if (name) {
+          seatTypes[name] = color;
+          refreshTypeSelect();
+          document.getElementById("newTypeName").value = "";
+        }
+      };
 
-// Single seat
-document.getElementById('drawSeatBtn').onclick=()=>{
-  createSeat(100,100,
-    document.getElementById('rowInput').value,
-    document.getElementById('numInput').value,
-    document.getElementById('typeInput').value,
-    parseFloat(document.getElementById('priceInput').value)||0,
-    document.getElementById('floorInput').value,
-    document.getElementById('sectionInput').value,
-    document.getElementById('seatNameInput').value
-  );
-};
+      // Create seat
+      function createSeat(
+        x,
+        y,
+        row,
+        col,
+        type = "Standard",
+        price = 0,
+        floor = "",
+        section = "",
+        seatName = ""
+      ) {
+        const circle = new fabric.Circle({
+          left: x,
+          top: y,
+          radius: 15,
+          fill: seatTypes[type],
+          stroke: "#333",
+          strokeWidth: 1,
+          originX: "center",
+          originY: "center",
+        });
+        const labelText = seatName || row + col;
+        const label = new fabric.Text(labelText, {
+          fontSize: 12,
+          originX: "center",
+          originY: "center",
+          top: y,
+          left: x,
+          selectable: false,
+        });
+        const group = new fabric.Group([circle, label], {
+          left: x,
+          top: y,
+          hasControls: false,
+          lockScalingFlip: true,
+        });
+        group.customProps = {
+          row,
+          col,
+          type,
+          price,
+          floor,
+          section,
+          seatName: labelText,
+        };
+        canvas.add(group);
+        canvas.renderAll();
+      }
 
-// Draw grid button
-document.getElementById('drawGridBtn').onclick=()=>{
-  const rows=parseInt(document.getElementById('gridRows').value)||1;
-  const cols=parseInt(document.getElementById('gridCols').value)||1;
-  const colStart=parseInt(document.getElementById('gridColStart').value)||1;
-  const rowPrefix=document.getElementById('rowInput').value||"A";
-  const type=document.getElementById('typeInput').value;
-  const price=parseFloat(document.getElementById('priceInput').value)||0;
-  const floor=document.getElementById('floorInput').value;
-  const section=document.getElementById('sectionInput').value;
-  const startX=50,startY=50,gapX=40,gapY=40;
-  for(let r=0;r<rows;r++){
-    for(let c=0;c<cols;c++){
-      createSeat(startX+c*gapX,startY+r*gapY,
-        String.fromCharCode(rowPrefix.charCodeAt(0)+r),
-        colStart+c,type,price,floor,section
+      // Single seat
+      document.getElementById("drawSeatBtn").onclick = () => {
+        createSeat(
+          100,
+          100,
+          document.getElementById("rowInput").value,
+          document.getElementById("numInput").value,
+          document.getElementById("typeInput").value,
+          parseFloat(document.getElementById("priceInput").value) || 0,
+          document.getElementById("floorInput").value,
+          document.getElementById("sectionInput").value,
+          document.getElementById("seatNameInput").value
+        );
+      };
+
+      // Draw grid
+      document.getElementById("drawGridBtn").onclick = () => {
+        const rows = parseInt(document.getElementById("gridRows").value) || 1;
+        const cols = parseInt(document.getElementById("gridCols").value) || 1;
+        const colStart =
+          parseInt(document.getElementById("gridColStart").value) || 1;
+        const rowPrefix = document.getElementById("rowInput").value || "A";
+        const type = document.getElementById("typeInput").value;
+        const price =
+          parseFloat(document.getElementById("priceInput").value) || 0;
+        const floor = document.getElementById("floorInput").value;
+        const section = document.getElementById("sectionInput").value;
+        const startX = 50,
+          startY = 50,
+          gapX = 40,
+          gapY = 40;
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            createSeat(
+              startX + c * gapX,
+              startY + r * gapY,
+              String.fromCharCode(rowPrefix.charCodeAt(0) + r),
+              colStart + c,
+              type,
+              price,
+              floor,
+              section
+            );
+          }
+        }
+      };
+
+      // Delete
+      document.getElementById("deleteBtn").onclick = () => {
+        canvas.getActiveObjects().forEach((o) => canvas.remove(o));
+        canvas.discardActiveObject();
+        canvas.renderAll();
+      };
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Delete" || e.key === "Backspace") {
+          canvas.getActiveObjects().forEach((o) => canvas.remove(o));
+          canvas.discardActiveObject();
+          canvas.renderAll();
+        }
+      });
+
+      // Shapes
+      function addShape(shape) {
+        let obj;
+        if (shape === "rect")
+          obj = new fabric.Rect({
+            width: 100,
+            height: 60,
+            fill: "rgba(0,0,255,0.2)",
+            stroke: "blue",
+          });
+        if (shape === "circle")
+          obj = new fabric.Circle({
+            radius: 40,
+            fill: "rgba(0,0,255,0.2)",
+            stroke: "blue",
+          });
+        if (shape === "ellipse")
+          obj = new fabric.Ellipse({
+            rx: 60,
+            ry: 40,
+            fill: "rgba(0,0,255,0.2)",
+            stroke: "blue",
+          });
+        if (shape === "polygon")
+          obj = new fabric.Polygon(
+            [
+              { x: 0, y: 0 },
+              { x: 100, y: 0 },
+              { x: 50, y: 80 },
+            ],
+            { fill: "rgba(0,0,255,0.2)", stroke: "blue" }
+          );
+        obj.left = 200;
+        obj.top = 200;
+        canvas.add(obj);
+      }
+      document.getElementById("rectTool").onclick = () => addShape("rect");
+      document.getElementById("circleTool").onclick = () => addShape("circle");
+      document.getElementById("ellipseTool").onclick = () =>
+        addShape("ellipse");
+      document.getElementById("polygonTool").onclick = () =>
+        addShape("polygon");
+
+      // Export
+      document.getElementById("exportBtn").onclick = () => {
+        console.log(JSON.stringify(canvas.toJSON(["customProps"])));
+        alert("Check console for export!");
+      };
+
+      // Sidebar updates
+      function applyChanges() {
+        canvas.getActiveObjects().forEach((obj) => {
+          if (obj.customProps) {
+            obj.customProps.row =
+              document.getElementById("rowInput").value || obj.customProps.row;
+            obj.customProps.col =
+              document.getElementById("numInput").value || obj.customProps.col;
+            obj.customProps.seatName =
+              document.getElementById("seatNameInput").value ||
+              obj.customProps.seatName;
+            obj.customProps.type =
+              document.getElementById("typeInput").value ||
+              obj.customProps.type;
+            obj.customProps.price =
+              parseFloat(document.getElementById("priceInput").value) ||
+              obj.customProps.price;
+            obj.customProps.floor =
+              document.getElementById("floorInput").value ||
+              obj.customProps.floor;
+            obj.customProps.section =
+              document.getElementById("sectionInput").value ||
+              obj.customProps.section;
+            obj.item(0).set("fill", seatTypes[obj.customProps.type]);
+            obj.item(1).text = obj.customProps.seatName;
+          }
+        });
+        canvas.renderAll();
+      }
+      [
+        "rowInput",
+        "numInput",
+        "seatNameInput",
+        "typeInput",
+        "priceInput",
+        "floorInput",
+        "sectionInput",
+      ].forEach((id) =>
+        document.getElementById(id).addEventListener("input", applyChanges)
       );
-    }
-  }
-};
 
-// Delete
-document.getElementById('deleteBtn').onclick=()=>{canvas.getActiveObjects().forEach(o=>canvas.remove(o));canvas.discardActiveObject();canvas.renderAll();};
-document.addEventListener('keydown',e=>{if(e.key==="Delete"||e.key==="Backspace"){canvas.getActiveObjects().forEach(o=>canvas.remove(o));canvas.discardActiveObject();canvas.renderAll();}});
+      // Update sidebar on select
+      canvas.on("selection:created", updateSidebar);
+      canvas.on("selection:updated", updateSidebar);
+      canvas.on("selection:cleared", () => {
+        [
+          "rowInput",
+          "numInput",
+          "seatNameInput",
+          "typeInput",
+          "priceInput",
+          "floorInput",
+          "sectionInput",
+        ].forEach((id) => (document.getElementById(id).value = ""));
+      });
+      function updateSidebar() {
+        const objs = canvas.getActiveObjects();
+        if (objs.length > 0 && objs[0].customProps) {
+          document.getElementById("rowInput").value = objs[0].customProps.row;
+          document.getElementById("numInput").value = objs[0].customProps.col;
+          document.getElementById("seatNameInput").value =
+            objs[0].customProps.seatName;
+          document.getElementById("typeInput").value = objs[0].customProps.type;
+          document.getElementById("priceInput").value =
+            objs[0].customProps.price;
+          document.getElementById("floorInput").value =
+            objs[0].customProps.floor;
+          document.getElementById("sectionInput").value =
+            objs[0].customProps.section;
+        }
+      }
 
-// Alignment
-function alignSeats(mode){
-  const objs=canvas.getActiveObjects();if(objs.length<2) return;
-  const ref=objs[0];objs.forEach(o=>{if(o===ref) return;
-    if(mode==='left') o.left=ref.left;
-    if(mode==='right') o.left=ref.left+ref.width- o.width;
-    if(mode==='top') o.top=ref.top;
-    if(mode==='bottom') o.top=ref.top+ref.height- o.height;
-    if(mode==='hcenter') o.left=ref.left + ref.width/2 - o.width/2;
-    if(mode==='vcenter') o.top=ref.top + ref.height/2 - o.height/2;
-  });canvas.renderAll();
-}
+      // Modal dynamic sections
+      const sectionsContainer = document.createElement("div");
+      sectionsContainer.id = "sectionsContainer";
+      document
+        .querySelector("#planModal .modal-body")
+        .appendChild(sectionsContainer);
+      function addSectionRow() {
+        const div = document.createElement("div");
+        div.className = "mb-2 p-2 border rounded";
+        div.innerHTML = `<label>Section Name</label>
+                   <input class="form-control mb-1 sectionName" value="Section1">
+                   <label>Rows</label>
+                   <input type="number" class="form-control mb-1 sectionRows" value="5">
+                   <label>Columns</label>
+                   <input type="number" class="form-control mb-1 sectionCols" value="10">
+                   <label>Start Column</label>
+                   <input type="number" class="form-control sectionStart" value="1">`;
+        sectionsContainer.appendChild(div);
+      }
+      document.getElementById("addSectionBtn").onclick = addSectionRow;
+      addSectionRow();
 
-// Sidebar updates
-function applyChanges(){canvas.getActiveObjects().forEach(obj=>{if(obj.customProps){
-  obj.customProps.row=document.getElementById('rowInput').value||obj.customProps.row;
-  obj.customProps.col=document.getElementById('numInput').value||obj.customProps.col;
-  obj.customProps.seatName=document.getElementById('seatNameInput').value||obj.customProps.seatName;
-  obj.customProps.type=document.getElementById('typeInput').value||obj.customProps.type;
-  obj.customProps.price=parseFloat(document.getElementById('priceInput').value)||obj.customProps.price;
-  obj.customProps.floor=document.getElementById('floorInput').value||obj.customProps.floor;
-  obj.customProps.section=document.getElementById('sectionInput').value||obj.customProps.section;
-  obj.item(0).set('fill',seatTypes[obj.customProps.type]);
-  obj.item(1).text=obj.customProps.seatName;
-}});canvas.renderAll();}
-['rowInput','numInput','seatNameInput','typeInput','priceInput','floorInput','sectionInput'].forEach(id=>document.getElementById(id).addEventListener('input',applyChanges));
+      // Show modal **before anything else**
+      const planModal = new bootstrap.Modal(
+        document.getElementById("planModal"),
+        { backdrop: "static", keyboard: false }
+      );
+      planModal.show();
 
-// Update sidebar on select
-canvas.on('selection:created',updateSidebar);canvas.on('selection:updated',updateSidebar);canvas.on('selection:cleared',()=>{['rowInput','numInput','seatNameInput','typeInput','priceInput','floorInput','sectionInput'].forEach(id=>document.getElementById(id).value="");});
-function updateSidebar(){const objs=canvas.getActiveObjects();if(objs.length>0&&objs[0].customProps){
-document.getElementById('rowInput').value=objs[0].customProps.row;
-document.getElementById('numInput').value=objs[0].customProps.col;
-document.getElementById('seatNameInput').value=objs[0].customProps.seatName;
-document.getElementById('typeInput').value=objs[0].customProps.type;
-document.getElementById('priceInput').value=objs[0].customProps.price;
-document.getElementById('floorInput').value=objs[0].customProps.floor;
-document.getElementById('sectionInput').value=objs[0].customProps.section;}}
-
-// Shapes
-function addShape(shape){let obj;
-if(shape==="rect") obj=new fabric.Rect({width:100,height:60,fill:'rgba(0,0,255,0.2)',stroke:'blue'});
-if(shape==="circle") obj=new fabric.Circle({radius:40,fill:'rgba(0,0,255,0.2)',stroke:'blue'});
-if(shape==="ellipse") obj=new fabric.Ellipse({rx:60,ry:40,fill:'rgba(0,0,255,0.2)',stroke:'blue'});
-if(shape==="polygon") obj=new fabric.Polygon([{x:0,y:0},{x:100,y:0},{x:50,y:80}],{fill:'rgba(0,0,255,0.2)',stroke:'blue'});
-obj.left=200; obj.top=200; canvas.add(obj);}
-document.getElementById("rectTool").onclick=()=>addShape("rect");
-document.getElementById("circleTool").onclick=()=>addShape("circle");
-document.getElementById("ellipseTool").onclick=()=>addShape("ellipse");
-document.getElementById("polygonTool").onclick=()=>addShape("polygon");
-document.getElementById("exportBtn").onclick=()=>{console.log(JSON.stringify(canvas.toJSON(["customProps"])));alert("Check console for export!");};
-
-// Show modal on page load
-var planModal = new bootstrap.Modal(document.getElementById('planModal'),{backdrop:'static',keyboard:false});
-planModal.show();
-document.getElementById('modalDrawBtn').onclick=()=>{
-  const rows=parseInt(document.getElementById('modalRows').value)||1;
-  const cols=parseInt(document.getElementById('modalColumns').value)||1;
-  const colStart=parseInt(document.getElementById('modalColStart').value)||1;
-  const rowPrefix="A";
-  const type="Standard";const price=0;
-  const floor=document.getElementById('modalPlanName').value;
-  const section=document.getElementById('modalSection').value;
-  const startX=50,startY=50,gapX=40,gapY=40;
-  for(let r=0;r<rows;r++){
-    for(let c=0;c<cols;c++){
-      createSeat(startX+c*gapX,startY+r*gapY,String.fromCharCode(rowPrefix.charCodeAt(0)+r),colStart+c,type,price,floor,section);
-    }
-  }
-  planModal.hide();
-};
-</script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
+      // Draw seats from modal
+      document.getElementById("modalDrawBtn").onclick = () => {
+        const sections = document.querySelectorAll("#sectionsContainer > div");
+        let startY = 50;
+        sections.forEach((sec) => {
+          const name = sec.querySelector(".sectionName").value;
+          const rows = parseInt(sec.querySelector(".sectionRows").value) || 1;
+          const cols = parseInt(sec.querySelector(".sectionCols").value) || 1;
+          const colStart =
+            parseInt(sec.querySelector(".sectionStart").value) || 1;
+          const startX = 50,
+            gapX = 40,
+            gapY = 40;
+          for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+              createSeat(
+                startX + c * gapX,
+                startY + r * gapY,
+                String.fromCharCode(65 + r),
+                colStart + c,
+                "Standard",
+                0,
+                "",
+                name
+              );
+            }
+          }
+          startY += rows * 40 + 20;
+        });
+        planModal.hide();
+      };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
 </html>
