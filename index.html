@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SeatMap Pro Clone</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+<style>
+  body { margin: 0; overflow: hidden; }
+  #canvas-container { border: 1px solid #ccc; width: 100%; height: 100%; }
+  #sidebar { height: 100vh; overflow-y: auto; }
+  .seat { cursor: pointer; }
+  .toolbar button { margin-right: 5px; }
+</style>
+</head>
+<body>
+<div class="container-fluid">
+  <div class="row">
+    <!-- Toolbar -->
+    <div class="col-12 bg-light p-2 toolbar">
+      <button id="addSeatsBtn" class="btn btn-sm btn-success">➕ Add Seats</button>
+      <button id="dragGridBtn" class="btn btn-sm btn-info">📦 Drag Grid</button>
+      <button id="singleRowBtn" class="btn btn-sm btn-secondary">➖ Single Row</button>
+      <button id="rectTool" class="btn btn-sm btn-outline-primary">⬛ Rectangle</button>
+      <button id="circleTool" class="btn btn-sm btn-outline-primary">⚪ Circle</button>
+      <button id="ellipseTool" class="btn btn-sm btn-outline-primary">⭕ Ellipse</button>
+      <button id="polygonTool" class="btn btn-sm btn-outline-primary">🔺 Polygon</button>
+      <button id="deleteBtn" class="btn btn-sm btn-danger">🗑 Delete</button>
+      <button id="exportBtn" class="btn btn-sm btn-warning">📤 Export JSON</button>
+    </div>
+
+    <!-- Canvas -->
+    <div class="col-9 p-0" style="height:100vh;">
+      <div id="canvas-container">
+        <canvas id="seatCanvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div id="sidebar" class="col-3 bg-white p-3 border-start">
+      <!-- Default Seat/Section Properties -->
+      <div id="seatSectionProps">
+        <h5>Seat / Section Properties</h5>
+        <div id="seatForm">
+          <div class="mb-2">
+            <label class="form-label">Rows</label>
+            <input type="number" id="seatRows" class="form-control" value="3">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Columns</label>
+            <input type="number" id="seatCols" class="form-control" value="5">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Row Prefix</label>
+            <input type="text" id="rowPrefix" class="form-control" value="A">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Column Start</label>
+            <input type="number" id="colStart" class="form-control" value="1">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Seat Type</label>
+            <select id="seatType" class="form-select">
+              <option>Standard</option>
+              <option>VIP</option>
+              <option>Disabled</option>
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Price</label>
+            <input type="number" id="seatPrice" class="form-control" value="0">
+          </div>
+          <button id="drawSeatsBtn" class="btn btn-success w-100">Draw Seats</button>
+        </div>
+      </div>
+
+      <!-- Selected Seat Properties -->
+      <div id="selectedSeatProps" style="display:none;">
+        <h5>Selected Seat</h5>
+        <div id="props">
+          <div class="mb-2">
+            <label class="form-label">Row</label>
+            <input type="text" id="rowInput" class="form-control">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Number</label>
+            <input type="text" id="numInput" class="form-control">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Type</label>
+            <select id="typeInput" class="form-select">
+              <option>Standard</option>
+              <option>VIP</option>
+              <option>Disabled</option>
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Price</label>
+            <input type="number" id="priceInput" class="form-control" value="0">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const container = document.getElementById('canvas-container');
+const canvasEl = document.getElementById('seatCanvas');
+const canvas = new fabric.Canvas('seatCanvas', { selection: true, preserveObjectStacking: true });
+
+// Resize canvas to container
+function resizeCanvas() {
+  canvas.setWidth(container.clientWidth);
+  canvas.setHeight(container.clientHeight);
+  canvas.renderAll();
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// Seat creation
+function createSeat(x, y, row, col, type="Standard", price=0) {
+  const circle = new fabric.Circle({
+    left: x, top: y, radius: 15,
+    fill: typeColor(type), stroke: '#333', strokeWidth: 1,
+    originX:'center', originY:'center'
+  });
+  const label = new fabric.Text(row + col, { fontSize:12, originX:'center', originY:'center', top:y, left:x, selectable:false });
+  const group = new fabric.Group([circle, label], { left:x, top:y, hasControls:false, lockScalingFlip:true });
+  group.customProps = { row, number: col, type, price };
+  canvas.add(group);
+}
+
+function typeColor(type) {
+  if(type==="VIP") return "#FFD700";
+  if(type==="Disabled") return "#eee";
+  return "#4caf50";
+}
+
+// Toolbar buttons
+document.getElementById("addSeatsBtn").onclick = () => { mode="seat"; showDefaultProps(); }
+document.getElementById("rectTool").onclick = () => addShape("rect");
+document.getElementById("circleTool").onclick = () => addShape("circle");
+document.getElementById("ellipseTool").onclick = () => addShape("ellipse");
+document.getElementById("polygonTool").onclick = () => addShape("polygon");
+document.getElementById("deleteBtn").onclick = deleteSelection;
+document.getElementById("exportBtn").onclick = () => { alert("Check console!"); console.log(JSON.stringify(canvas.toJSON(["customProps"]))); };
+
+// Draw seats from form
+document.getElementById("drawSeatsBtn").onclick = () => {
+  const rows = parseInt(document.getElementById("seatRows").value);
+  const cols = parseInt(document.getElementById("seatCols").value);
+  const rowPrefix = document.getElementById("rowPrefix").value;
+  const colStart = parseInt(document.getElementById("colStart").value);
+  const type = document.getElementById("seatType").value;
+  const price = parseFloat(document.getElementById("seatPrice").value);
+  const startX=50, startY=50, gap=40;
+
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      createSeat(startX+c*gap, startY+r*gap, String.fromCharCode(rowPrefix.charCodeAt(0)+r), colStart+c, type, price);
+    }
+  }
+  canvas.renderAll();
+  showDefaultProps();
+}
+
+// Shapes
+function addShape(shape) {
+  let obj;
+  if(shape==="rect") obj = new fabric.Rect({ width:100,height:60,fill:'rgba(0,0,255,0.2)', stroke:'blue' });
+  if(shape==="circle") obj = new fabric.Circle({ radius:40, fill:'rgba(0,0,255,0.2)', stroke:'blue' });
+  if(shape==="ellipse") obj = new fabric.Ellipse({ rx:60, ry:40, fill:'rgba(0,0,255,0.2)', stroke:'blue' });
+  if(shape==="polygon") obj = new fabric.Polygon([{x:0,y:0},{x:100,y:0},{x:50,y:80}], {fill:'rgba(0,0,255,0.2)', stroke:'blue'});
+  obj.left=200; obj.top=200;
+  canvas.add(obj);
+}
+
+// Delete
+function deleteSelection(){canvas.getActiveObjects().forEach(o=>canvas.remove(o)); canvas.discardActiveObject(); canvas.renderAll();}
+document.addEventListener("keydown", (e)=>{if(e.key==="Delete"||e.key==="Backspace") deleteSelection()})
+
+// Sidebar
+canvas.on('selection:created', showSelectedSeatProps);
+canvas.on('selection:updated', showSelectedSeatProps);
+canvas.on('selection:cleared', showDefaultProps);
+
+function showSelectedSeatProps(e){
+  const objs = canvas.getActiveObjects();
+  if(objs.length > 0){
+    document.getElementById("seatSectionProps").style.display="none";
+    document.getElementById("selectedSeatProps").style.display="block";
+    if(objs.length===1){
+      const obj=objs[0];
+      if(obj.customProps){
+        document.getElementById("rowInput").value=obj.customProps.row;
+        document.getElementById("numInput").value=obj.customProps.number;
+        document.getElementById("typeInput").value=obj.customProps.type;
+        document.getElementById("priceInput").value=obj.customProps.price;
+      }
+    } else {
+      document.getElementById("rowInput").value="";
+      document.getElementById("numInput").value="";
+      document.getElementById("typeInput").value="";
+      document.getElementById("priceInput").value="";
+    }
+  }
+}
+function showDefaultProps(){document.getElementById("seatSectionProps").style.display="block"; document.getElementById("selectedSeatProps").style.display="none";}
+
+// Apply sidebar changes to all selected seats
+function applySidebarChanges(){
+  const objs = canvas.getActiveObjects();
+  if(objs.length > 0){
+    objs.forEach(obj => {
+      if(obj.customProps){
+        obj.customProps.row = document.getElementById("rowInput").value || obj.customProps.row;
+        obj.customProps.number = document.getElementById("numInput").value || obj.customProps.number;
+        obj.customProps.type = document.getElementById("typeInput").value || obj.customProps.type;
+        obj.customProps.price = parseFloat(document.getElementById("priceInput").value) || obj.customProps.price;
+        obj.item(0).set("fill", typeColor(obj.customProps.type));
+        obj.item(1).text = obj.customProps.row + obj.customProps.number;
+      }
+    });
+    canvas.renderAll();
+  }
+}
+document.querySelectorAll("#rowInput,#numInput,#typeInput,#priceInput").forEach(input=>input.addEventListener("input",applySidebarChanges));
+
+// Interactive seat creation: drag grid & single row
+let dragMode = null, startX, startY;
+document.getElementById("dragGridBtn").onclick = ()=>{dragMode="grid";}
+document.getElementById("singleRowBtn").onclick = ()=>{dragMode="row";}
+
+canvas.on('mouse:down', function(o){
+  if(!dragMode) return;
+  const pointer = canvas.getPointer(o.e);
+  startX = pointer.x; startY = pointer.y;
+});
+
+canvas.on('mouse:up', function(o){
+  if(!dragMode) return;
+  const pointer = canvas.getPointer(o.e);
+  const endX = pointer.x, endY = pointer.y;
+
+  const type = document.getElementById("seatType").value;
+  const price = parseFloat(document.getElementById("seatPrice").value);
+  const rowPrefix = document.getElementById("rowPrefix").value;
+  const colStart = parseInt(document.getElementById("colStart").value);
+  const gap = 40;
+
+  if(dragMode==="grid"){
+    const rows = Math.max(1, Math.round((endY-startY)/gap));
+    const cols = Math.max(1, Math.round((endX-startX)/gap));
+    for(let r=0;r<rows;r++){
+      for(let c=0;c<cols;c++){
+        createSeat(startX+c*gap, startY+r*gap, String.fromCharCode(rowPrefix.charCodeAt(0)+r), colStart+c, type, price);
+      }
+    }
+  }
+  if(dragMode==="row"){
+    const cols = Math.max(1, Math.round((endX-startX)/gap));
+    const r = 0; 
+    for(let c=0;c<cols;c++){
+      createSeat(startX+c*gap, startY, rowPrefix, colStart+c, type, price);
+    }
+  }
+  canvas.renderAll();
+  dragMode = null;
+});
+</script>
+</body>
+</html>
