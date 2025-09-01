@@ -17,6 +17,8 @@
         border: 1px solid #ccc;
         width: 100%;
         height: 100%;
+        position: relative;
+        background: #f0f0f0;
       }
       #sidebar {
         height: 100vh;
@@ -26,56 +28,18 @@
         margin-right: 5px;
         margin-bottom: 5px;
       }
+      .section-inputs {
+        border: 1px dashed #ccc;
+        padding: 5px;
+        margin-bottom: 5px;
+      }
     </style>
   </head>
   <body>
-    <!-- Modal for new layout -->
-    <div class="modal fade" id="planModal" tabindex="-1">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Create Seat Plan</h5>
-          </div>
-          <div class="modal-body">
-            <p>Enter section details:</p>
-            <div class="mb-2">
-              <label>Number of Sections</label>
-              <input
-                type="number"
-                id="numSections"
-                class="form-control"
-                value="1"
-                min="1"
-              />
-            </div>
-            <div id="sectionsContainer"></div>
-            <button id="addSectionBtn" class="btn btn-sm btn-secondary mb-2">
-              ➕ Add Section
-            </button>
-          </div>
-          <div class="modal-footer">
-            <button
-              type="button"
-              id="modalDrawBtn"
-              class="btn btn-primary w-100"
-            >
-              Draw Seats
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <div class="container-fluid">
       <div class="row">
         <!-- Toolbar -->
         <div class="col-12 bg-light p-2 toolbar">
-          <button id="dragGridBtn" class="btn btn-sm btn-info">
-            📦 Drag Grid
-          </button>
-          <button id="singleRowBtn" class="btn btn-sm btn-secondary">
-            ➖ Single Row
-          </button>
           <button id="rectTool" class="btn btn-sm btn-outline-primary">
             ⬛ Rectangle
           </button>
@@ -90,6 +54,9 @@
           </button>
           <button id="exportBtn" class="btn btn-sm btn-warning">
             📤 Export JSON
+          </button>
+          <button id="addTextBtn" class="btn btn-sm btn-warning">
+            Add Text
           </button>
         </div>
 
@@ -106,6 +73,15 @@
             <li class="nav-item">
               <button
                 class="nav-link active"
+                data-bs-toggle="tab"
+                data-bs-target="#seat-plan-settings"
+              >
+                Seat Plan
+              </button>
+            </li>
+            <li class="nav-item">
+              <button
+                class="nav-link"
                 data-bs-toggle="tab"
                 data-bs-target="#seat-edit"
               >
@@ -133,8 +109,37 @@
           </ul>
 
           <div class="tab-content mt-2">
+            <!-- Seat Plan Settings -->
+            <div class="tab-pane fade show active" id="seat-plan-settings">
+              <h6>Seat Plan Settings</h6>
+              <div class="mb-2">
+                <label>Number of Sections</label>
+                <input
+                  type="number"
+                  id="sectionCountInput"
+                  class="form-control"
+                  value="1"
+                  min="1"
+                  max="10"
+                />
+              </div>
+              <div id="sectionsContainer"></div>
+              <button id="drawSeatsBtn" class="btn btn-primary w-100 mb-3">
+                Draw Seats
+              </button>
+            </div>
+
             <!-- Seat Edit -->
-            <div class="tab-pane fade show active" id="seat-edit">
+            <div class="tab-pane fade" id="seat-edit">
+              <div class="mb-2">
+                <label>Section Name</label
+                ><input
+                  type="text"
+                  id="sectionInputSidebar"
+                  class="form-control"
+                  readonly
+                />
+              </div>
               <div class="mb-2">
                 <label>Row Prefix</label
                 ><input
@@ -155,7 +160,12 @@
               </div>
               <div class="mb-2">
                 <label>Seat Name</label
-                ><input type="text" id="seatNameInput" class="form-control" />
+                ><input
+                  type="text"
+                  id="seatNameInput"
+                  class="form-control"
+                  value=""
+                />
               </div>
               <div class="mb-2">
                 <label>Rows</label
@@ -198,8 +208,8 @@
             <!-- Price & Type -->
             <div class="tab-pane fade" id="price-type">
               <div class="mb-2">
-                <label>Seat Type</label
-                ><select id="typeInput" class="form-select"></select>
+                <label>Seat Type</label>
+                <select id="typeInput" class="form-select"></select>
               </div>
               <div class="mb-2">
                 <label>Price</label
@@ -239,17 +249,11 @@
                 <label>Floor</label
                 ><input type="text" id="floorInput" class="form-control" />
               </div>
-              <div class="mb-2">
-                <label>Section</label
-                ><input type="text" id="sectionInput" class="form-control" />
-              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- ...keep the head and body layout as before... -->
 
     <script>
       const container = document.getElementById("canvas-container");
@@ -257,6 +261,39 @@
         selection: true,
         preserveObjectStacking: true,
       });
+
+      // Canvas background grid
+      const gridSize = 20;
+      function drawGrid() {
+        const width = canvas.getWidth();
+        const height = canvas.getHeight();
+        canvas.backgroundColor = "#f0f0f0";
+        for (let i = 0; i < width; i += gridSize) {
+          canvas.add(
+            new fabric.Line([i, 0, i, height], {
+              stroke: "#ddd",
+              selectable: false,
+              evented: false,
+            })
+          );
+        }
+        for (let j = 0; j < height; j += gridSize) {
+          canvas.add(
+            new fabric.Line([0, j, width, j], {
+              stroke: "#ddd",
+              selectable: false,
+              evented: false,
+            })
+          );
+        }
+      }
+      function clearGrid() {
+        canvas.getObjects().forEach((o) => {
+          if (!o.customProps) canvas.remove(o);
+        });
+      }
+
+      // Resize
       function resizeCanvas() {
         canvas.setWidth(container.clientWidth);
         canvas.setHeight(container.clientHeight);
@@ -265,8 +302,24 @@
       resizeCanvas();
       window.addEventListener("resize", resizeCanvas);
 
+      // Zoom
+      canvas.on("mouse:wheel", function (opt) {
+        if (!opt.e.ctrlKey) return;
+        let zoom = canvas.getZoom();
+        zoom *= 0.999 ** opt.e.deltaY;
+        zoom = Math.min(Math.max(0.5, zoom), 3);
+        canvas.setZoom(zoom);
+        opt.e.preventDefault();
+        opt.e.stopPropagation();
+      });
+
       // Seat types
-      let seatTypes = { Standard: "#4caf50", VIP: "#FFD700", Hold: "#00BFFF" };
+      let seatTypes = {
+        Standard: "#4caf50",
+        VIP: "#FFD700",
+        Hold: "#00BFFF",
+        Disabled: "#aaa",
+      };
       function refreshTypeSelect() {
         const sel = document.getElementById("typeInput");
         sel.innerHTML = "";
@@ -287,6 +340,33 @@
           document.getElementById("newTypeName").value = "";
         }
       };
+
+      // Dynamic sections
+      const sectionCountInput = document.getElementById("sectionCountInput");
+      const sectionsContainer = document.getElementById("sectionsContainer");
+      function renderSectionInputs() {
+        sectionsContainer.innerHTML = "";
+        const count = parseInt(sectionCountInput.value) || 1;
+        for (let i = 0; i < count; i++) {
+          const div = document.createElement("div");
+          div.className = "section-inputs";
+          div.innerHTML = `<label>Section ${
+            i + 1
+          } Name</label><input type="text" class="form-control sectionNameInput" value="Section ${
+            i + 1
+          }">
+                     <label>Rows</label><input type="number" class="form-control sectionRows" value="5">
+                     <label>Columns</label><input type="number" class="form-control sectionCols" value="10">
+                     <label>Start Column</label><input type="number" class="form-control sectionColStart" value="1">`;
+          sectionsContainer.appendChild(div);
+
+          Array.from(div.querySelectorAll("input")).forEach((input) => {
+            input.addEventListener("input", drawSeats);
+          });
+        }
+      }
+      sectionCountInput.addEventListener("input", renderSectionInputs);
+      renderSectionInputs();
 
       // Create seat
       function createSeat(
@@ -338,6 +418,72 @@
         canvas.renderAll();
       }
 
+      // Draw seats live
+      // Draw seats live
+      function drawSeats() {
+        canvas.clear(); // clear all objects (grid + seats + old sections)
+        drawGrid();
+
+        let startX = 50;
+        let startY = 50;
+        const gapX = 40,
+          gapY = 40,
+          sectionGap = 60;
+        const floorVal = document.getElementById("floorInput").value;
+        const sectionCount = parseInt(sectionCountInput.value) || 1;
+
+        for (let i = 0; i < sectionCount; i++) {
+          const name =
+            document.getElementsByClassName("sectionNameInput")[i].value;
+          const rows =
+            parseInt(document.getElementsByClassName("sectionRows")[i].value) ||
+            1;
+          const cols =
+            parseInt(document.getElementsByClassName("sectionCols")[i].value) ||
+            1;
+          const colStart =
+            parseInt(
+              document.getElementsByClassName("sectionColStart")[i].value
+            ) || 1;
+
+          // 🔹 Draw section name label above seats
+          const sectionLabel = new fabric.Text(name, {
+            left: startX + (cols * gapX) / 2,
+            top: startY - 30,
+            fontSize: 18,
+            fontWeight: "bold",
+            originX: "center",
+            fill: "#333",
+            selectable: true, // ✅ now moveable
+            evented: true, // ✅ can drag/resize
+          });
+          canvas.add(sectionLabel);
+
+          // 🔹 Draw seats
+          for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+              createSeat(
+                startX + c * gapX,
+                startY + r * gapY,
+                String.fromCharCode(65 + r),
+                colStart + c,
+                "Standard",
+                0,
+                floorVal,
+                name
+              );
+            }
+          }
+
+          // Move to next section horizontally
+          startX += cols * gapX + sectionGap;
+        }
+
+        canvas.renderAll();
+      }
+
+      document.getElementById("drawSeatsBtn").onclick = drawSeats;
+
       // Single seat
       document.getElementById("drawSeatBtn").onclick = () => {
         createSeat(
@@ -348,42 +494,13 @@
           document.getElementById("typeInput").value,
           parseFloat(document.getElementById("priceInput").value) || 0,
           document.getElementById("floorInput").value,
-          document.getElementById("sectionInput").value,
+          document.getElementById("sectionInputSidebar").value,
           document.getElementById("seatNameInput").value
         );
       };
 
-      // Draw grid
-      document.getElementById("drawGridBtn").onclick = () => {
-        const rows = parseInt(document.getElementById("gridRows").value) || 1;
-        const cols = parseInt(document.getElementById("gridCols").value) || 1;
-        const colStart =
-          parseInt(document.getElementById("gridColStart").value) || 1;
-        const rowPrefix = document.getElementById("rowInput").value || "A";
-        const type = document.getElementById("typeInput").value;
-        const price =
-          parseFloat(document.getElementById("priceInput").value) || 0;
-        const floor = document.getElementById("floorInput").value;
-        const section = document.getElementById("sectionInput").value;
-        const startX = 50,
-          startY = 50,
-          gapX = 40,
-          gapY = 40;
-        for (let r = 0; r < rows; r++) {
-          for (let c = 0; c < cols; c++) {
-            createSeat(
-              startX + c * gapX,
-              startY + r * gapY,
-              String.fromCharCode(rowPrefix.charCodeAt(0) + r),
-              colStart + c,
-              type,
-              price,
-              floor,
-              section
-            );
-          }
-        }
-      };
+      // Draw grid from sidebar
+      document.getElementById("drawGridBtn").onclick = drawSeats;
 
       // Delete
       document.getElementById("deleteBtn").onclick = () => {
@@ -397,6 +514,47 @@
           canvas.discardActiveObject();
           canvas.renderAll();
         }
+      });
+
+      // Update sidebar on select
+      canvas.on("selection:created", updateSidebar);
+      canvas.on("selection:updated", updateSidebar);
+      canvas.on("selection:cleared", () => {
+        document.getElementById("sectionInputSidebar").value = "";
+      });
+
+      function updateSidebar() {
+        const objs = canvas.getActiveObjects();
+        if (objs.length > 0 && objs[0].customProps) {
+          document.getElementById("sectionInputSidebar").value =
+            objs[0].customProps.section;
+          document.getElementById("rowInput").value = objs[0].customProps.row;
+          document.getElementById("numInput").value = objs[0].customProps.col;
+          document.getElementById("seatNameInput").value =
+            objs[0].customProps.seatName;
+          document.getElementById("typeInput").value = objs[0].customProps.type;
+          document.getElementById("priceInput").value =
+            objs[0].customProps.price;
+        }
+      }
+
+      // Apply type/color to selected seats live
+      ["typeInput", "priceInput", "seatNameInput"].forEach((id) => {
+        document.getElementById(id).addEventListener("input", () => {
+          const objs = canvas.getActiveObjects();
+          objs.forEach((obj) => {
+            if (obj.customProps) {
+              obj.customProps.type = document.getElementById("typeInput").value;
+              obj.customProps.price =
+                parseFloat(document.getElementById("priceInput").value) || 0;
+              obj.customProps.seatName =
+                document.getElementById("seatNameInput").value;
+              obj.item(0).set("fill", seatTypes[obj.customProps.type]);
+              obj.item(1).text = obj.customProps.seatName;
+            }
+          });
+          canvas.renderAll();
+        });
       });
 
       // Shapes
@@ -448,138 +606,21 @@
         alert("Check console for export!");
       };
 
-      // Sidebar updates
-      function applyChanges() {
-        canvas.getActiveObjects().forEach((obj) => {
-          if (obj.customProps) {
-            obj.customProps.row =
-              document.getElementById("rowInput").value || obj.customProps.row;
-            obj.customProps.col =
-              document.getElementById("numInput").value || obj.customProps.col;
-            obj.customProps.seatName =
-              document.getElementById("seatNameInput").value ||
-              obj.customProps.seatName;
-            obj.customProps.type =
-              document.getElementById("typeInput").value ||
-              obj.customProps.type;
-            obj.customProps.price =
-              parseFloat(document.getElementById("priceInput").value) ||
-              obj.customProps.price;
-            obj.customProps.floor =
-              document.getElementById("floorInput").value ||
-              obj.customProps.floor;
-            obj.customProps.section =
-              document.getElementById("sectionInput").value ||
-              obj.customProps.section;
-            obj.item(0).set("fill", seatTypes[obj.customProps.type]);
-            obj.item(1).text = obj.customProps.seatName;
-          }
-        });
-        canvas.renderAll();
-      }
-      [
-        "rowInput",
-        "numInput",
-        "seatNameInput",
-        "typeInput",
-        "priceInput",
-        "floorInput",
-        "sectionInput",
-      ].forEach((id) =>
-        document.getElementById(id).addEventListener("input", applyChanges)
-      );
+      drawGrid();
 
-      // Update sidebar on select
-      canvas.on("selection:created", updateSidebar);
-      canvas.on("selection:updated", updateSidebar);
-      canvas.on("selection:cleared", () => {
-        [
-          "rowInput",
-          "numInput",
-          "seatNameInput",
-          "typeInput",
-          "priceInput",
-          "floorInput",
-          "sectionInput",
-        ].forEach((id) => (document.getElementById(id).value = ""));
-      });
-      function updateSidebar() {
-        const objs = canvas.getActiveObjects();
-        if (objs.length > 0 && objs[0].customProps) {
-          document.getElementById("rowInput").value = objs[0].customProps.row;
-          document.getElementById("numInput").value = objs[0].customProps.col;
-          document.getElementById("seatNameInput").value =
-            objs[0].customProps.seatName;
-          document.getElementById("typeInput").value = objs[0].customProps.type;
-          document.getElementById("priceInput").value =
-            objs[0].customProps.price;
-          document.getElementById("floorInput").value =
-            objs[0].customProps.floor;
-          document.getElementById("sectionInput").value =
-            objs[0].customProps.section;
-        }
-      }
-
-      // Modal dynamic sections
-      const sectionsContainer = document.createElement("div");
-      sectionsContainer.id = "sectionsContainer";
       document
-        .querySelector("#planModal .modal-body")
-        .appendChild(sectionsContainer);
-      function addSectionRow() {
-        const div = document.createElement("div");
-        div.className = "mb-2 p-2 border rounded";
-        div.innerHTML = `<label>Section Name</label>
-                   <input class="form-control mb-1 sectionName" value="Section1">
-                   <label>Rows</label>
-                   <input type="number" class="form-control mb-1 sectionRows" value="5">
-                   <label>Columns</label>
-                   <input type="number" class="form-control mb-1 sectionCols" value="10">
-                   <label>Start Column</label>
-                   <input type="number" class="form-control sectionStart" value="1">`;
-        sectionsContainer.appendChild(div);
-      }
-      document.getElementById("addSectionBtn").onclick = addSectionRow;
-      addSectionRow();
-
-      // Show modal **before anything else**
-      const planModal = new bootstrap.Modal(
-        document.getElementById("planModal"),
-        { backdrop: "static", keyboard: false }
-      );
-      planModal.show();
-
-      // Draw seats from modal
-      document.getElementById("modalDrawBtn").onclick = () => {
-        const sections = document.querySelectorAll("#sectionsContainer > div");
-        let startY = 50;
-        sections.forEach((sec) => {
-          const name = sec.querySelector(".sectionName").value;
-          const rows = parseInt(sec.querySelector(".sectionRows").value) || 1;
-          const cols = parseInt(sec.querySelector(".sectionCols").value) || 1;
-          const colStart =
-            parseInt(sec.querySelector(".sectionStart").value) || 1;
-          const startX = 50,
-            gapX = 40,
-            gapY = 40;
-          for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-              createSeat(
-                startX + c * gapX,
-                startY + r * gapY,
-                String.fromCharCode(65 + r),
-                colStart + c,
-                "Standard",
-                0,
-                "",
-                name
-              );
-            }
-          }
-          startY += rows * 40 + 20;
+        .getElementById("addTextBtn")
+        .addEventListener("click", function () {
+          const text = new fabric.IText("New Text", {
+            left: 100,
+            top: 100,
+            fontSize: 20,
+            fill: "#000",
+            editable: true,
+          });
+          canvas.add(text).setActiveObject(text);
+          canvas.renderAll();
         });
-        planModal.hide();
-      };
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   </body>
