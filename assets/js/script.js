@@ -12,7 +12,6 @@ let seatTypes = {
   Hold: "#00BFFF",
   Disabled: "#aaa",
 };
-
 function refreshTypeSelect() {
   const sel = document.getElementById("typeInput");
   sel.innerHTML = "";
@@ -24,7 +23,6 @@ function refreshTypeSelect() {
   });
 }
 refreshTypeSelect();
-
 document.getElementById("addTypeBtn").onclick = () => {
   const name = document.getElementById("newTypeName").value.trim();
   const color = document.getElementById("newTypeColor").value;
@@ -120,12 +118,9 @@ function renderSectionInputs() {
         <input type="text" class="form-control sectionNameInput" value="Section ${
           i + 1
         }">
-        <label>Rows</label>
-        <input type="number" class="form-control sectionRows" value="5">
-        <label>Columns</label>
-        <input type="number" class="form-control sectionCols" value="10">
-        <label>Start Column</label>
-        <input type="number" class="form-control sectionColStart" value="1">
+        <label>Rows</label><input type="number" class="form-control sectionRows" value="5">
+        <label>Columns</label><input type="number" class="form-control sectionCols" value="10">
+        <label>Start Column</label><input type="number" class="form-control sectionColStart" value="1">
       </div>`;
     sectionTabContent.appendChild(tabPane);
 
@@ -150,11 +145,10 @@ function renderSectionInputs() {
     });
   }
 }
-
 sectionCountInput.addEventListener("input", renderSectionInputs);
 renderSectionInputs();
 
-// Create seat
+// Seat creation
 function createSeat(
   x,
   y,
@@ -239,7 +233,6 @@ function drawSeats() {
 
     for (let r = 0; r < sec.rows; r++) {
       for (let c = 0; c < sec.cols; c++) {
-        const seatName = String.fromCharCode(65 + r) + (sec.colStart + c);
         const seat = createSeat(
           startX + c * gapX,
           startY + r * gapY,
@@ -248,13 +241,11 @@ function drawSeats() {
           "Standard",
           0,
           floorVal,
-          sec.name,
-          seatName
+          sec.name
         );
         canvas.add(seat);
       }
     }
-
     startX += sec.cols * gapX + sectionGap;
   });
 
@@ -295,7 +286,7 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// Update sidebar
+// Update sidebar on selection
 canvas.on("selection:created", updateSidebar);
 canvas.on("selection:updated", updateSidebar);
 canvas.on("selection:cleared", () => {
@@ -315,8 +306,8 @@ function updateSidebar() {
   }
 }
 
-// Apply type/color and price without overwriting seat names
-["typeInput", "priceInput"].forEach((id) => {
+// Live apply type/color/label
+["typeInput", "priceInput", "seatNameInput"].forEach((id) => {
   document.getElementById(id).addEventListener("input", () => {
     const objs = canvas.getActiveObjects();
     objs.forEach((obj) => {
@@ -324,36 +315,93 @@ function updateSidebar() {
         obj.customProps.type = document.getElementById("typeInput").value;
         obj.customProps.price =
           parseFloat(document.getElementById("priceInput").value) || 0;
+        obj.customProps.seatName =
+          document.getElementById("seatNameInput").value;
         obj.item(0).set("fill", seatTypes[obj.customProps.type]);
+        obj.item(1).text = obj.customProps.seatName;
       }
     });
     canvas.renderAll();
   });
 });
 
-// Export grouped JSON
-// Export all seats as a flat array
+// Shapes
+function addShape(shape) {
+  let obj;
+  if (shape === "rect")
+    obj = new fabric.Rect({
+      width: 100,
+      height: 60,
+      fill: "rgba(0,0,255,0.2)",
+      stroke: "blue",
+    });
+  if (shape === "circle")
+    obj = new fabric.Circle({
+      radius: 40,
+      fill: "rgba(0,0,255,0.2)",
+      stroke: "blue",
+    });
+  if (shape === "ellipse")
+    obj = new fabric.Ellipse({
+      rx: 60,
+      ry: 40,
+      fill: "rgba(0,0,255,0.2)",
+      stroke: "blue",
+    });
+  if (shape === "polygon")
+    obj = new fabric.Polygon(
+      [
+        { x: 0, y: 0 },
+        { x: 100, y: 0 },
+        { x: 50, y: 80 },
+      ],
+      { fill: "rgba(0,0,255,0.2)", stroke: "blue" }
+    );
+  obj.left = 200;
+  obj.top = 200;
+  canvas.add(obj);
+  canvas.setActiveObject(obj);
+  canvas.renderAll();
+}
+document.getElementById("rectTool").onclick = () => addShape("rect");
+document.getElementById("circleTool").onclick = () => addShape("circle");
+document.getElementById("ellipseTool").onclick = () => addShape("ellipse");
+document.getElementById("polygonTool").onclick = () => addShape("polygon");
+
+// Add Text
+document.getElementById("addTextBtn").onclick = () => {
+  const text = new fabric.IText("New Text", {
+    left: 100,
+    top: 100,
+    fontSize: 20,
+    fill: "#000",
+    editable: true,
+  });
+  canvas.add(text).setActiveObject(text);
+  canvas.renderAll();
+};
+
+// Export
 document.getElementById("exportBtn").onclick = () => {
   const floors = {};
 
-  canvas.getObjects().forEach((o, index) => {
-    if (!o.customProps) return;
+  canvas.getObjects().forEach((obj, index) => {
+    if (!obj.customProps) return;
 
-    const floorName = o.customProps.floor || "Unassigned Floor";
-    const sectionName = o.customProps.section || "Unassigned Section";
-    const rowName = o.customProps.row || "Unassigned Row";
-    const shape = o.customProps.shape || "Rectangle"; // assume you store shape per seat or section
+    const floorName = obj.customProps.floor || "Ground Floor";
+    const sectionName = obj.customProps.section || "Unassigned Section";
+    const rowName = obj.customProps.row || "Unassigned Row";
 
     if (!floors[floorName])
       floors[floorName] = {
         id: Object.keys(floors).length + 1,
-        floor: floorName,
+        "Floor Name": floorName,
         sections: {},
       };
     if (!floors[floorName].sections[sectionName])
       floors[floorName].sections[sectionName] = {
         sectionName,
-        shape,
+        shape: "Rectangle",
         rows: {},
       };
     if (!floors[floorName].sections[sectionName].rows[rowName])
@@ -361,25 +409,25 @@ document.getElementById("exportBtn").onclick = () => {
 
     floors[floorName].sections[sectionName].rows[rowName].push({
       id: index + 1,
-      seatName: o.customProps.seatName,
-      type: o.customProps.type,
-      price: o.customProps.price,
-      status: o.customProps.status || "active",
-      left: o.left,
-      top: o.top,
+      seatName: obj.customProps.seatName,
+      type: obj.customProps.type,
+      price: obj.customProps.price || 0,
+      status: obj.customProps.status || "active",
+      left: obj.left,
+      top: obj.top,
     });
   });
 
-  // Format output
+  // Convert object structure to array format
   const exportData = Object.values(floors).map((floor) => {
-    const sections = Object.values(floor.sections).map((section) => {
-      const rows = Object.keys(section.rows).map((rowName) => ({
+    const sections = Object.values(floor.sections).map((sec) => {
+      const rows = Object.entries(sec.rows).map(([rowName, seats]) => ({
         row: rowName,
-        seats: section.rows[rowName],
+        seats,
       }));
-      return { sectionName: section.sectionName, shape: section.shape, rows };
+      return { ...sec, rows };
     });
-    return { id: floor.id, "Floor Name": floor.floor, sections };
+    return { ...floor, sections };
   });
 
   console.log(JSON.stringify(exportData, null, 2));
